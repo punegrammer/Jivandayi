@@ -1,4 +1,4 @@
-name: CI
+name: Android APK CI
 
 on:
   push:
@@ -12,6 +12,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Build Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y zip unzip openjdk-17-jdk python3-pip git
+          pip install --upgrade pip
+          pip install buildozer cython virtualenv
+
       - name: Get Date
         id: get-date
         run: echo "date=$(date -u +'%Y%m%d')" >> "$GITHUB_OUTPUT"
@@ -19,7 +31,7 @@ jobs:
       - name: Cache Buildozer Global Directory
         uses: actions/cache@v2
         with:
-          path: .buildozer_global
+          path: ~/.buildozer
           key: buildozer-global-${{ hashFiles('buildozer.spec') }}
 
       - name: Cache .buildozer Directory
@@ -28,15 +40,12 @@ jobs:
           path: .buildozer
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
-        with:
-          command: buildozer android debug
-          buildozer_version: stable
+      - name: Build APK
+        run: |
+          buildozer android debug
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v2
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
         with:
-          name: package
-          path: ${{ steps.buildozer.outputs.filename }}
+          name: android-apk
+          path: bin/*.apk
